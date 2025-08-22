@@ -1,0 +1,106 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = "file:./dev.db"
+}
+
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  name      String?
+  password  String
+  role      Role     @default(USER)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  domains   Domain[]
+}
+
+model Domain {
+  id        String     @id @default(cuid())
+  name      String     @unique
+  userId    String
+  user      User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  active    Boolean    @default(true)
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+  endpoints Endpoint[]
+}
+
+model Endpoint {
+  id             String            @id @default(cuid())
+  path           String
+  method         HttpMethod
+  domainId       String
+  domain         Domain            @relation(fields: [domainId], references: [id], onDelete: Cascade)
+  description    String?
+  active         Boolean           @default(true)
+  createdAt      DateTime          @default(now())
+  updatedAt      DateTime          @updatedAt
+  responses      EndpointResponse[]
+  
+  @@unique([domainId, path, method])
+}
+
+model EndpointResponse {
+  id             String            @id @default(cuid())
+  endpointId     String
+  endpoint       Endpoint          @relation(fields: [endpointId], references: [id], onDelete: Cascade)
+  name           String
+  statusCode     Int               @default(200)
+  headers        Json?
+  cookies        Json?
+  body           Json?
+  responseData   Json
+  priority       Int               @default(0)
+  conditions     ResponseCondition[]
+  active         Boolean           @default(true)
+  createdAt      DateTime          @default(now())
+  updatedAt      DateTime          @updatedAt
+}
+
+model ResponseCondition {
+  id                 String              @id @default(cuid())
+  endpointResponseId String
+  endpointResponse   EndpointResponse    @relation(fields: [endpointResponseId], references: [id], onDelete: Cascade)
+  type               ConditionType
+  field              String
+  operator           ConditionOperator
+  value              String
+  createdAt          DateTime            @default(now())
+}
+
+enum Role {
+  USER
+  ADMIN
+}
+
+enum HttpMethod {
+  GET
+  POST
+  PUT
+  PATCH
+  DELETE
+  OPTIONS
+  HEAD
+}
+
+enum ConditionType {
+  HEADER
+  COOKIE
+  QUERY
+  BODY
+}
+
+enum ConditionOperator {
+  EQUALS
+  CONTAINS
+  STARTS_WITH
+  ENDS_WITH
+  REGEX_MATCH
+}

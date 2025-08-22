@@ -1,36 +1,170 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Mock API Server
+
+A comprehensive mock API server built with Next.js, TypeScript, and Prisma. This server provides user management, authentication, domain-based routing, and highly configurable mock endpoints with dynamic response matching.
+
+## Features
+
+- **User Management & Authentication**: Complete JWT-based authentication system
+- **Domain-Based Routing**: Only accept requests from configured domains
+- **CRUD Operations**: Full domain and endpoint management
+- **Configurable Endpoints**: Support for GET, POST, PUT, PATCH, DELETE, OPTIONS, HEAD methods
+- **Dynamic Response Matching**: Multiple responses per endpoint based on headers, cookies, query params, and body
+- **Database Storage**: SQLite database with Prisma ORM
+- **Server-Side Rendering**: Built with Next.js App Router for optimal performance
+- **Type Safety**: Full TypeScript implementation with Zod validation
+
+## Tech Stack
+
+- **Framework**: Next.js 15 with App Router
+- **Language**: TypeScript
+- **Database**: SQLite with Prisma ORM
+- **Authentication**: JWT tokens with bcryptjs
+- **Validation**: Zod schemas
+- **Styling**: Tailwind CSS
+- **Deployment**: Ready for Vercel deployment
 
 ## Getting Started
 
-First, run the development server:
+### 1. Install Dependencies
+
+```bash
+npm install
+```
+
+### 2. Set up Environment Variables
+
+The `.env` file is already configured with:
+
+```env
+DATABASE_URL="file:./dev.db"
+NEXTAUTH_URL="http://localhost:3000"
+NEXTAUTH_SECRET="your-nextauth-secret-key-here"
+JWT_SECRET="your-jwt-secret-key-here"
+```
+
+### 3. Start Development Server
 
 ```bash
 npm run dev
-# or
-yarn dev
+```
+
+The server will be running at `http://localhost:3000`
+
+## API Usage Examples
+
+### 1. Register a User
+```bash
+curl -X POST http://localhost:3000/api/auth/register \
+  -H "Content-Type: application/json" \
+  -d '{"name":"John Doe","email":"john@test.com","password":"password123"}'
+```
+
+### 2. Login
+```bash
+curl -X POST http://localhost:3000/api/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"email":"john@test.com","password":"password123"}'
+```
+
+### 3. Create a Domain
+```bash
+curl -X POST http://localhost:3000/api/domains \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer YOUR_TOKEN" \
+  -d '{"name":"api.example.com"}'
+```
+
+### 4. Create an Endpoint
+```bash
+curl -X POST http://localhost:3000/api/domains/DOMAIN_ID/endpoints \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer YOUR_TOKEN" \
+  -d '{"path":"/api/users","method":"GET","description":"Get users"}'
+```
+
+### 5. Create a Response
+```bash
+curl -X POST http://localhost:3000/api/domains/DOMAIN_ID/endpoints/ENDPOINT_ID/responses \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer YOUR_TOKEN" \
+  -d '{"name":"Success","statusCode":200,"responseData":{"users":[{"id":1,"name":"John"}]}}'
+```
+
+### 6. Test Mock Endpoint
+```bash
+curl http://localhost:3000/api/mock/users \
+  -H "x-mock-domain: api.example.com"
+```
+
+## Key Features Explained
+
+### Domain-Based Routing
+- Only requests with matching domain headers are processed
+- Use `Host` header or `x-mock-domain` header to specify domain
+- Each user can manage multiple domains
+
+### Response Matching
+- Multiple responses per endpoint with priority-based selection
+- Conditions based on headers, cookies, query params, or request body
+- Operators: EQUALS, CONTAINS, STARTS_WITH, ENDS_WITH, REGEX_MATCH
+
+### Authentication
+- JWT-based authentication with Bearer tokens
+- Password hashing with bcryptjs
+- User roles (USER, ADMIN) for future expansion
+
+## Project Structure
+
+```
+src/
+├── app/
+│   ├── api/              # API routes
+│   │   ├── auth/         # Authentication endpoints  
+│   │   ├── domains/      # Domain management
+│   │   └── mock/         # Mock API handler
+│   ├── dashboard/        # Dashboard page
+│   └── page.tsx          # Home page
+├── lib/
+│   ├── auth.ts          # Authentication utilities
+│   ├── db.ts            # Database connection
+│   ├── mock-utils.ts    # Mock server logic
+│   └── validations.ts   # Zod schemas
+└── prisma/
+    ├── schema.prisma    # Database schema
+    └── migrations/      # Database migrations
+```
+
+## Development Commands
 # or
 pnpm dev
 # or
 bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+```bash
+# Start development server
+npm run dev
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+# Build for production  
+npm run build
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+# Start production server
+npm start
 
-## Learn More
+# Database operations
+npx prisma migrate dev    # Apply migrations
+npx prisma generate      # Generate client
+npx prisma studio        # Open database GUI
+```
 
-To learn more about Next.js, take a look at the following resources:
+## Contributing
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+1. Fork the repository
+2. Create a feature branch  
+3. Make changes with proper TypeScript types
+4. Test your changes
+5. Submit a pull request
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## License
 
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+MIT License - feel free to use this project for your mock API needs!
