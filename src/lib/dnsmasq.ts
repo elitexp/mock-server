@@ -163,9 +163,18 @@ export class DnsmasqManager {
       // Generate SSL certificate first
       await this.generateSSLCertificate(domain);
 
-      const nginxConfig = `# Custom proxy for ${domain}
+      const nginxConfig = `# Custom proxy for ${domain} with HTTP to HTTPS redirect
+# HTTP server - redirect to HTTPS
 server {
     listen 127.0.0.1:80;
+    server_name ${domain};
+    
+    # Redirect all HTTP requests to HTTPS
+    return 301 https://$server_name$request_uri;
+}
+
+# HTTPS server - main proxy
+server {
     listen 127.0.0.1:443 ssl;
     http2 on;
     server_name ${domain};
@@ -173,12 +182,17 @@ server {
     ssl_certificate "${process.env.HOME}/Library/Application Support/Herd/config/ssl/${domain}.crt";
     ssl_certificate_key "${process.env.HOME}/Library/Application Support/Herd/config/ssl/${domain}.key";
     
+    # SSL Configuration
+    ssl_protocols TLSv1.2 TLSv1.3;
+    ssl_ciphers ECDHE-RSA-AES128-GCM-SHA256:ECDHE-RSA-AES256-GCM-SHA384:ECDHE-RSA-AES128-SHA256:ECDHE-RSA-AES256-SHA384;
+    ssl_prefer_server_ciphers off;
+    
     location / {
         proxy_pass http://127.0.0.1:${targetUrl};
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_set_header X-Forwarded-Proto https;
         proxy_http_version 1.1;
         proxy_set_header Upgrade $http_upgrade;
         proxy_set_header Connection "upgrade";
@@ -261,7 +275,7 @@ server {
   }
 
   /**
-   * Generate SSL certificate for the domain
+   * Generate SSL certificate for the domain using Herd's trusted CA
    */
   private async generateSSLCertificate(domain: string): Promise<void> {
     try {
@@ -285,15 +299,252 @@ server {
         // Certificate doesn't exist, create it
       }
 
-      // Generate self-signed certificate
-      const opensslCmd = `openssl req -x509 -newkey rsa:2048 -keyout "${keyPath}" -out "${certPath}" -days 365 -nodes -subj "/C=US/ST=Local/L=Local/O=Mock Server/CN=${domain}"`;
+      // Use Herd's secure command first (trusted and verified)
+      try {
+        await execAsync(`herd secure ${domain}`);
+        console.log(
+          `   → Generated SSL certificate using Herd's secure command`
+        );
 
-      await execAsync(opensslCmd);
-      console.log(`   → Generated SSL certificate for ${domain}`);
+        // Now modify the certificate to remove .test from domain names
+        await this.modifyHerdCertificateForDomain(domain);
+
+        console.log(
+          `   → Modified certificate to remove .test suffix for ${domain}`
+        );
+      } catch (herdError) {
+        console.log(
+          `   → Herd secure command failed, trying manual CA signing...`
+        );
+
+        // Fallback to manual CA signing
+        const caDir = path.join(
+          process.env.HOME || "",
+          "Library/Application Support/Herd/config/valet/CA"
+        );
+        const caCertPath = path.join(caDir, "LaravelValetCASelfSigned.pem");
+        const caKeyPath = path.join(caDir, "LaravelValetCASelfSigned.key");
+
+        // Check if Herd's CA exists
+        try {
+          await fs.access(caCertPath);
+          await fs.access(caKeyPath);
+          console.log(`   → Using Herd's trusted CA for ${domain}`);
+        } catch {
+          console.log(
+            `   → Herd CA not found, falling back to self-signed certificate`
+          );
+          await this.generateSelfSignedCertificate(domain, certPath, keyPath);
+          return;
+        }
+
+        // Generate private key for the domain
+        await execAsync(`openssl genrsa -out "${keyPath}" 2048`);
+
+        // Create certificate signing request with SAN for the actual domain (no .test)
+        const csrPath = path.join(sslDir, `${domain}.csr`);
+        const configPath = path.join(sslDir, `${domain}.conf`);
+
+        // Create a config file for the CSR with SAN extension for actual domain
+        const configContent = `[req]
+distinguished_name = req_distinguished_name
+req_extensions = v3_req
+prompt = no
+
+[req_distinguished_name]
+C=US
+ST=Local
+L=Local
+O=Mock Server
+CN=${domain}
+
+[v3_req]
+basicConstraints = CA:FALSE
+keyUsage = critical, digitalSignature, keyEncipherment, keyAgreement
+extendedKeyUsage = critical, serverAuth, clientAuth
+subjectAltName = @alt_names
+
+[alt_names]
+DNS.1 = ${domain}
+DNS.2 = *.${domain}`;
+
+        await fs.writeFile(configPath, configContent);
+
+        // Create CSR with the config file
+        const csrCmd = `openssl req -new -key "${keyPath}" -out "${csrPath}" -config "${configPath}"`;
+        await execAsync(csrCmd);
+
+        // Sign the certificate with Herd's CA
+        const signCmd = `openssl x509 -req -in "${csrPath}" -CA "${caCertPath}" -CAkey "${caKeyPath}" -CAcreateserial -out "${certPath}" -days 365 -extensions v3_req -extfile "${configPath}"`;
+        await execAsync(signCmd);
+
+        // Clean up temporary files
+        await fs.unlink(csrPath);
+        await fs.unlink(configPath);
+
+        console.log(
+          `   → Generated trusted SSL certificate for ${domain} using Herd CA`
+        );
+      }
     } catch (error) {
       console.error(`❌ Failed to generate SSL certificate:`, error);
+      // Fallback to self-signed if CA signing fails
+      try {
+        await this.generateSelfSignedCertificate(
+          domain,
+          path.join(
+            process.env.HOME || "",
+            "Library/Application Support/Herd/config/ssl",
+            `${domain}.crt`
+          ),
+          path.join(
+            process.env.HOME || "",
+            "Library/Application Support/Herd/config/ssl",
+            `${domain}.key`
+          )
+        );
+      } catch (fallbackError) {
+        console.error(
+          `❌ Fallback certificate generation also failed:`,
+          fallbackError
+        );
+        throw error;
+      }
+    }
+  }
+
+  /**
+   * Modify Herd's certificate to remove .test suffix from domain names
+   * This allows us to use Herd's trusted certificates but for the actual domain
+   */
+  private async modifyHerdCertificateForDomain(domain: string): Promise<void> {
+    try {
+      const sslDir = path.join(
+        process.env.HOME || "",
+        "Library/Application Support/Herd/config/ssl"
+      );
+      const valetCertDir = path.join(
+        process.env.HOME || "",
+        "Library/Application Support/Herd/config/valet/Certificates"
+      );
+      const caDir = path.join(
+        process.env.HOME || "",
+        "Library/Application Support/Herd/config/valet/CA"
+      );
+
+      const finalCertPath = path.join(sslDir, `${domain}.crt`);
+      const finalKeyPath = path.join(sslDir, `${domain}.key`);
+
+      const valetCertPath = path.join(valetCertDir, `${domain}.test.crt`);
+      const valetKeyPath = path.join(valetCertDir, `${domain}.test.key`);
+
+      const caCertPath = path.join(caDir, "LaravelValetCASelfSigned.pem");
+      const caKeyPath = path.join(caDir, "LaravelValetCASelfSigned.key");
+
+      // Copy the private key from valet (it doesn't have domain names in it)
+      await fs.copyFile(valetKeyPath, finalKeyPath);
+
+      // Extract the public key from the original certificate and create a new CSR
+      // with the correct domain name, then re-sign it with Herd's CA
+
+      const tempCsrPath = path.join(sslDir, `${domain}_temp.csr`);
+      const tempConfigPath = path.join(sslDir, `${domain}_temp.conf`);
+
+      // Create a config file for the new certificate with correct domain and proper key usage
+      const configContent = `[req]
+distinguished_name = req_distinguished_name
+req_extensions = v3_req
+prompt = no
+
+[req_distinguished_name]
+C=US
+ST=Local
+L=Local
+O=Laravel Valet CA Self Signed Organization
+CN=${domain}
+
+[v3_req]
+basicConstraints = CA:FALSE
+keyUsage = critical, digitalSignature, keyEncipherment, keyAgreement
+extendedKeyUsage = critical, serverAuth, clientAuth
+subjectAltName = @alt_names
+
+[alt_names]
+DNS.1 = ${domain}
+DNS.2 = *.${domain}`;
+
+      await fs.writeFile(tempConfigPath, configContent);
+
+      // Create a new CSR with the original key but correct domain name
+      const csrCmd = `openssl req -new -key "${finalKeyPath}" -out "${tempCsrPath}" -config "${tempConfigPath}"`;
+      await execAsync(csrCmd);
+
+      // Re-sign the certificate with Herd's CA using the correct domain name
+      const signCmd = `openssl x509 -req -in "${tempCsrPath}" -CA "${caCertPath}" -CAkey "${caKeyPath}" -CAcreateserial -out "${finalCertPath}" -days 365 -extensions v3_req -extfile "${tempConfigPath}"`;
+      await execAsync(signCmd);
+
+      // Clean up temporary files
+      await fs.unlink(tempCsrPath);
+      await fs.unlink(tempConfigPath);
+
+      console.log(
+        `   → Successfully modified certificate for ${domain} (removed .test suffix)`
+      );
+    } catch (error) {
+      console.error(
+        `❌ Failed to modify Herd certificate for ${domain}:`,
+        error
+      );
       throw error;
     }
+  }
+
+  /**
+   * Generate self-signed certificate as fallback
+   */
+  private async generateSelfSignedCertificate(
+    domain: string,
+    certPath: string,
+    keyPath: string
+  ): Promise<void> {
+    const sslDir = path.dirname(certPath);
+    const configPath = path.join(sslDir, `${domain}_selfsigned.conf`);
+
+    // Create config file with proper extensions
+    const configContent = `[req]
+distinguished_name = req_distinguished_name
+req_extensions = v3_req
+prompt = no
+
+[req_distinguished_name]
+C=US
+ST=Local
+L=Local
+O=Mock Server
+CN=${domain}
+
+[v3_req]
+basicConstraints = CA:FALSE
+keyUsage = critical, digitalSignature, keyEncipherment, keyAgreement
+extendedKeyUsage = critical, serverAuth, clientAuth
+subjectAltName = @alt_names
+
+[alt_names]
+DNS.1 = ${domain}
+DNS.2 = *.${domain}`;
+
+    await fs.writeFile(configPath, configContent);
+
+    // Generate self-signed certificate with proper extensions
+    const opensslCmd = `openssl req -x509 -newkey rsa:2048 -keyout "${keyPath}" -out "${certPath}" -days 365 -nodes -config "${configPath}" -extensions v3_req`;
+    await execAsync(opensslCmd);
+
+    // Clean up config file
+    await fs.unlink(configPath);
+
+    console.log(
+      `   → Generated self-signed certificate for ${domain} (fallback)`
+    );
   }
 
   /**
@@ -342,9 +593,9 @@ server {
       try {
         const nginxConfigDir = path.join(
           process.env.HOME || "",
-          "Library/Application Support/Herd/config/nginx"
+          "Library/Application Support/Herd/config/valet/Nginx"
         );
-        const configPath = path.join(nginxConfigDir, `${domain}.conf`);
+        const configPath = path.join(nginxConfigDir, domain);
 
         await fs.unlink(configPath);
         console.log(`   → Removed nginx configuration`);
@@ -368,17 +619,18 @@ server {
         // Certificates may not exist
       }
 
-      // Remove any Herd proxies (including .test versions)
+      // Remove any Herd secured domains (this will remove the .test version)
       try {
-        await execAsync(`herd unproxy ${domain}`);
-        console.log(`   → Removed Herd proxy`);
+        await execAsync(`herd unsecure ${domain}`);
+        console.log(`   → Removed Herd secured domain`);
       } catch {
         // May not exist
       }
 
+      // Also try removing if it was secured with .test suffix
       try {
-        await execAsync(`herd unproxy ${domain}.test`);
-        console.log(`   → Removed .test proxy`);
+        await execAsync(`herd unsecure ${domain}.test`);
+        console.log(`   → Removed .test secured domain`);
       } catch {
         // May not exist
       }
