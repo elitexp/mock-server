@@ -79,9 +79,23 @@ export async function POST(request: NextRequest) {
     });
 
     // Add DNS entry if dnsmasq is available
+    let dnsConfigured = false;
+    let httpsConfigured = false;
     try {
       if (await dnsmasqManager.isHerdDnsmasqAvailable()) {
         await dnsmasqManager.addDomain(validatedData.name);
+        dnsConfigured = true;
+
+        // Also set up HTTPS proxy without .test suffix
+        try {
+          const httpsSuccess = await dnsmasqManager.setupCustomNginxProxy(
+            validatedData.name,
+            3000
+          );
+          httpsConfigured = httpsSuccess;
+        } catch (httpsError) {
+          console.error("HTTPS proxy configuration error:", httpsError);
+        }
       }
     } catch (error) {
       console.error("DNS configuration error:", error);
@@ -92,6 +106,8 @@ export async function POST(request: NextRequest) {
       {
         message: "Domain created successfully",
         domain,
+        dnsConfigured,
+        httpsConfigured,
       },
       { status: 201 }
     );
