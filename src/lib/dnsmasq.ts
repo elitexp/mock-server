@@ -98,6 +98,9 @@ export class DnsmasqManager {
 
       // Setup HTTPS proxy for the domain
       await this.setupHttpsProxy(domain);
+
+      // Always attempt to flush DNS cache on macOS
+      await this.flushDnsCache();
     } catch (error) {
       console.error(`❌ Failed to add ${domain} to Herd dnsmasq:`, error);
     }
@@ -682,11 +685,28 @@ DNS.2 = *.${domain}`;
             "   → Failed to restart Herd services, configuration may need manual reload"
           );
         }
+
+        // Always attempt to flush DNS cache on macOS
+        await this.flushDnsCache();
       } else {
         console.log(`ℹ️ Domain ${domain} was not found in dnsmasq config`);
       }
     } catch (error) {
       console.error(`❌ Failed to remove ${domain} from Herd dnsmasq:`, error);
+    }
+  }
+
+  /**
+   * Always attempt to flush the macOS DNS cache
+   */
+  async flushDnsCache(): Promise<void> {
+    try {
+      // macOS DNS flush command
+      await execAsync("sudo dscacheutil -flushcache && sudo killall -HUP mDNSResponder");
+      console.log("   → Flushed macOS DNS cache");
+    } catch (error) {
+      console.error("   → Failed to flush macOS DNS cache. You may need to run manually:");
+      console.error("     sudo dscacheutil -flushcache && sudo killall -HUP mDNSResponder");
     }
   }
 }
