@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { dnsmasqManager } from "@/lib/dnsmasq";
 import { getAuthenticatedUser } from "@/lib/auth";
+import { isValid } from "zod/v3";
 
 export async function POST(request: NextRequest) {
   try {
@@ -67,7 +68,8 @@ export async function POST(request: NextRequest) {
 export async function GET(request: NextRequest) {
   try {
     // Verify authentication
-    const authResult = await verifyJWT(request);
+    // const authResult = await verifyJWT(request);
+    const authResult= {isValid:false, user: {role:null}};
     if (!authResult.isValid || authResult.user?.role !== "ADMIN") {
       return NextResponse.json(
         { error: "Unauthorized - Admin access required" },

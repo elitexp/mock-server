@@ -16,10 +16,6 @@ export default function DnsManagementPage() {
   const [restarting, setRestarting] = useState(false)
   const [error, setError] = useState('')
 
-  useEffect(() => {
-    fetchDnsStatus()
-  }, [])
-
   const fetchDnsStatus = async () => {
     try {
       const token = localStorage.getItem('token')
@@ -35,12 +31,16 @@ export default function DnsManagementPage() {
       } else {
         setError('Failed to fetch DNS status')
       }
-    } catch (err) {
+    } catch (_err) {
       setError('Failed to fetch DNS status')
     } finally {
       setLoading(false)
     }
   }
+
+  useEffect(() => {
+    fetchDnsStatus()
+  }, [fetchDnsStatus])
 
   const restartDnsmasq = async () => {
     setRestarting(true)
@@ -64,7 +64,7 @@ export default function DnsManagementPage() {
       } else {
         setError(data.message || 'Failed to restart dnsmasq')
       }
-    } catch (err) {
+    } catch (_err) {
       setError('Failed to restart dnsmasq')
     } finally {
       setRestarting(false)
@@ -175,9 +175,9 @@ export default function DnsManagementPage() {
       <div className="mt-8 bg-blue-50 border border-blue-200 rounded-md p-6">
         <h3 className="text-lg font-medium text-blue-900 mb-2">How It Works</h3>
         <div className="text-sm text-blue-800 space-y-2">
-          <p>• When you add a domain (e.g., "api.facebook.com"), it&apos;s automatically added to dnsmasq configuration</p>
+          <p>• When you add a domain (e.g., &quot;api.facebook.com&quot;), it&apos;s automatically added to dnsmasq configuration</p>
           <p>• dnsmasq will resolve the domain to your local mock server (127.0.0.1:3001)</p>
-          <p>• Domains ending in ".test" are preserved and not modified</p>
+          <p>• Domains ending in &quot;.test&quot; are preserved and not modified</p>
           <p>• When you delete a domain, it&apos;s automatically removed from dnsmasq</p>
           <p>• No need to manually edit hosts files or restart services</p>
         </div>

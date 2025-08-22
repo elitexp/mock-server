@@ -34,7 +34,7 @@ export default function Login() {
       } else {
         setError(data.error || 'Login failed')
       }
-    } catch (error) {
+    } catch (_error) {
       setError('Network error. Please try again.')
     } finally {
       setIsLoading(false)

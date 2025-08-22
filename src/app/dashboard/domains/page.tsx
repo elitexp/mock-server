@@ -52,7 +52,7 @@ export default function DomainsPage() {
 
       const data = await response.json()
       setDomains(data.domains)
-    } catch (err) {
+    } catch (_err) {
       setError('Failed to load domains')
     } finally {
       setLoading(false)
@@ -82,8 +82,8 @@ export default function DomainsPage() {
       setShowCreateModal(false)
       setCreateForm({ name: '', description: '' })
       fetchDomains()
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to create domain')
+    } catch (_err) {
+      setError(_err instanceof Error ? _err.message : 'Failed to create domain')
     } finally {
       setCreating(false)
     }
@@ -108,7 +108,7 @@ export default function DomainsPage() {
       }
 
       fetchDomains()
-    } catch (err) {
+    } catch (_err) {
       setError('Failed to delete domain')
     }
   }

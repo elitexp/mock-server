@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { useRouter, usePathname } from 'next/navigation'
+import Link from 'next/link';
 
 export default function DashboardLayout({
   children,
@@ -64,11 +65,11 @@ export default function DashboardLayout({
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
             <div className="flex items-center space-x-8">
-              <a href="/dashboard" className="text-xl font-semibold text-gray-900">
+              <Link href="/dashboard" className="text-xl font-semibold text-gray-900">
                 Mock API Server
-              </a>
+              </Link>
               <div className="flex space-x-4">
-                <a
+                <Link
                   href="/dashboard"
                   className={`px-3 py-2 rounded-md text-sm font-medium ${
                     pathname === '/dashboard'
@@ -77,8 +78,8 @@ export default function DashboardLayout({
                   }`}
                 >
                   Dashboard
-                </a>
-                <a
+                </Link>
+                <Link
                   href="/dashboard/domains"
                   className={`px-3 py-2 rounded-md text-sm font-medium ${
                     pathname.startsWith('/dashboard/domains')
@@ -87,8 +88,8 @@ export default function DashboardLayout({
                   }`}
                 >
                   Domains
-                </a>
-                <a
+                </Link>
+                <Link
                   href="/dashboard/test"
                   className={`px-3 py-2 rounded-md text-sm font-medium ${
                     pathname === '/dashboard/test'
@@ -97,8 +98,8 @@ export default function DashboardLayout({
                   }`}
                 >
                   Test
-                </a>
-                <a
+                </Link>
+                <Link
                   href="/dashboard/dns"
                   className={`px-3 py-2 rounded-md text-sm font-medium ${
                     pathname === '/dashboard/dns'
@@ -107,7 +108,7 @@ export default function DashboardLayout({
                   }`}
                 >
                   DNS
-                </a>
+                </Link>
               </div>
             </div>
             <div className="flex items-center space-x-4">

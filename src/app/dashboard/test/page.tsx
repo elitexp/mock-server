@@ -42,7 +42,7 @@ function TestPage() {
         console.log('Fetched domains:', data) // Debug log
         setDomains(data.domains || data)
       }
-    } catch (err) {
+    } catch (_err) {
       setError('Failed to load domains')
     }
   }
@@ -143,8 +143,8 @@ function TestPage() {
         time: endTime - startTime
       })
 
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Test failed')
+    } catch (_err) {
+      setError(_err instanceof Error ? _err.message : 'Test failed')
     } finally {
       setLoading(false)
     }

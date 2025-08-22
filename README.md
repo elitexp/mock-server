@@ -168,3 +168,46 @@ npx prisma studio        # Open database GUI
 ## License
 
 MIT License - feel free to use this project for your mock API needs!
+
+## Running as a System Service (macOS)
+
+To enable automatic DNS cache flushing and system-level network configuration, you must run the Mock Server as a root-level service using launchd.
+
+### Build and Install the Service
+
+1. Build the service and update the configuration:
+
+   ```sh
+   ./build-service.sh
+   ```
+
+2. Install and start the service (requires root):
+
+   ```sh
+   sudo ./service.sh install
+   ```
+
+3. Check service status:
+
+   ```sh
+   sudo ./service.sh status
+   ```
+
+4. View logs:
+
+   ```sh
+   ./service.sh logs
+   ./service.sh errors
+   ```
+
+5. Uninstall the service:
+
+   ```sh
+   sudo ./service.sh uninstall
+   ```
+
+### Why root is required
+
+- The service must run as root to allow automatic DNS cache flushing on macOS (using `dscacheutil` and `mDNSResponder`).
+- If the service is not run as root, DNS flush will fail and you may need to flush the cache manually.
+- All service management commands (`install`, `uninstall`, `restart`) must be run with `sudo`.

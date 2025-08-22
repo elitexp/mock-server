@@ -35,7 +35,7 @@ export default function Register() {
       } else {
         setError(data.error || 'Registration failed')
       }
-    } catch (error) {
+    } catch (_error) {
       setError('Network error. Please try again.')
     } finally {
       setIsLoading(false)

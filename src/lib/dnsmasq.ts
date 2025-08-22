@@ -36,6 +36,15 @@ export class DnsmasqManager {
     }
   }
 
+  async isConfigDirAvailable(): Promise<boolean> {
+    try {
+      await fs.access(HERD_CONFIG_DIR);
+      return true;
+    } catch (error) {
+      return false;
+    }
+  }
+
   async addDomain(domain: string): Promise<void> {
     if (!(await this.isHerdDnsmasqAvailable())) {
       console.log(
@@ -701,6 +710,10 @@ DNS.2 = *.${domain}`;
    */
   async flushDnsCache(): Promise<void> {
     try {
+      // Warn if not running as root
+      if (process.getuid && process.getuid() !== 0) {
+        console.warn("⚠️  Warning: DNS flush may fail because the process is not running as root. Run the service as root for automatic DNS cache flushing.");
+      }
       // macOS DNS flush command
       await execAsync("sudo dscacheutil -flushcache && sudo killall -HUP mDNSResponder");
       console.log("   → Flushed macOS DNS cache");

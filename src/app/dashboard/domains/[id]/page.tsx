@@ -72,7 +72,7 @@ export default function DomainEndpointsPage() {
       const domainData = await domainResponse.json()
       setDomain(domainData.domain)
       setEndpoints(domainData.domain.endpoints || [])
-    } catch (err) {
+    } catch (_err) {
       setError('Failed to load domain and endpoints')
     } finally {
       setLoading(false)
@@ -102,8 +102,8 @@ export default function DomainEndpointsPage() {
       setShowCreateModal(false)
       setCreateForm({ path: '', method: 'GET', description: '' })
       fetchDomainAndEndpoints()
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to create endpoint')
+    } catch (_err) {
+      setError(_err instanceof Error ? _err.message : 'Failed to create endpoint')
     } finally {
       setCreating(false)
     }
@@ -128,7 +128,7 @@ export default function DomainEndpointsPage() {
       }
 
       fetchDomainAndEndpoints()
-    } catch (err) {
+    } catch (_err) {
       setError('Failed to delete endpoint')
     }
   }

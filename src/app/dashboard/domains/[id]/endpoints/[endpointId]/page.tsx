@@ -92,7 +92,7 @@ export default function EndpointResponsesPage() {
       const data = await response.json()
       setEndpoint(data.endpoint)
       setResponses(data.endpoint.responses || [])
-    } catch (err) {
+    } catch (_err) {
       setError('Failed to load endpoint and responses')
     } finally {
       setLoading(false)
@@ -112,7 +112,7 @@ export default function EndpointResponsesPage() {
         if (createForm.headers.trim()) {
           headers = JSON.parse(createForm.headers)
         }
-      } catch {
+      } catch (_err) {
         throw new Error('Invalid JSON in headers field')
       }
 
@@ -122,7 +122,7 @@ export default function EndpointResponsesPage() {
         if (createForm.responseData.trim()) {
           responseData = JSON.parse(createForm.responseData)
         }
-      } catch {
+      } catch (_err) {
         throw new Error('Invalid JSON in responseData field')
       }
 
@@ -157,8 +157,8 @@ export default function EndpointResponsesPage() {
       })
       setConditions([])
       fetchEndpointAndResponses()
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to create response')
+    } catch (_err) {
+      setError('Failed to create response')
     } finally {
       setCreating(false)
     }
@@ -306,9 +306,9 @@ export default function EndpointResponsesPage() {
                         {response.conditions.map((condition, index) => (
                           <div key={index} className="bg-gray-50 p-3 rounded-md text-sm">
                             <span className="font-medium text-gray-700">{condition.type}</span>
-                            <span className="text-gray-500 mx-2">'{condition.key}'</span>
+                            <span className="text-gray-500 mx-2">&apos;{condition.key}&apos;</span>
                             <span className="font-medium text-gray-700">{condition.operator}</span>
-                            <span className="text-gray-500 mx-2">'{condition.value}'</span>
+                            <span className="text-gray-500 mx-2">&apos;{condition.value}&apos;</span>
                           </div>
                         ))}
                       </div>

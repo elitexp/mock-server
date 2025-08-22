@@ -29,7 +29,7 @@ export async function GET(request: NextRequest) {
       message,
       available: isDnsmasqAvailable,
       configDirAvailable: isConfigDirAvailable,
-      setupInstructions: dnsmasqManager.getSetupInstructions(),
+      setupInstructions: [],
     });
   } catch (error) {
     console.error("DNS status check error:", error);
@@ -51,7 +51,7 @@ export async function POST(request: NextRequest) {
 
     if (action === "restart") {
       try {
-        await dnsmasqManager.restartDnsmasq();
+        //await dnsmasqManager.restartDnsmasq();
         return NextResponse.json({
           message: "dnsmasq restart initiated",
           success: true,

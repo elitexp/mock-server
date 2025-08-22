@@ -1,3 +1,5 @@
+import Link from 'next/link';
+
 export default function Dashboard() {
   return (
     <div className="min-h-screen bg-gray-50">
@@ -15,12 +17,12 @@ export default function Dashboard() {
             <p className="text-gray-600 mb-4">
               Manage your API domains and their configurations.
             </p>
-            <a
+            <Link
               href="/dashboard/domains"
               className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700"
             >
               Manage Domains
-            </a>
+            </Link>
           </div>
 
           <div className="bg-white rounded-lg shadow p-6">
@@ -28,12 +30,12 @@ export default function Dashboard() {
             <p className="text-gray-600 mb-4">
               Test your configured endpoints quickly.
             </p>
-            <a
+            <Link
               href="/dashboard/test"
               className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-green-600 hover:bg-green-700"
             >
               Test Endpoints
-            </a>
+            </Link>
           </div>
 
           <div className="bg-white rounded-lg shadow p-6">
@@ -41,12 +43,12 @@ export default function Dashboard() {
             <p className="text-gray-600 mb-4">
               View API documentation and examples.
             </p>
-            <a
+            <Link
               href="/dashboard/docs"
               className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-purple-600 hover:bg-purple-700"
             >
               View Docs
-            </a>
+            </Link>
           </div>
         </div>
 
@@ -82,7 +84,7 @@ export default function Dashboard() {
           <h4 className="font-semibold text-blue-900 mb-3">Example Usage:</h4>
           <div className="bg-white rounded-lg p-4 font-mono text-sm">
             <div className="text-gray-600 mb-2"># Create a domain and endpoint, then test:</div>
-            <div className="text-blue-600">curl -H "Host: api.example.com" http://localhost:3001/api/v1/hello</div>
+            <div className="text-blue-600">curl -H &quot;Host: api.example.com&quot; http://localhost:3001/api/v1/hello</div>
           </div>
         </div>
       </div>
