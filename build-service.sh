@@ -36,6 +36,7 @@ sed -i.bak "s|/opt/homebrew/bin/node|${NODE_PATH}|g" com.mockserver.service.plis
 sed -i.bak "s|/Library/www/sites/mock-server|${CURRENT_DIR}|g" com.mockserver.service.plist
 
 echo "✅ Build completed successfully!"
+echo "   → Build Output Directory: .next"
 echo
 echo "📊 Build Information:"
 echo "   → Project Directory: ${CURRENT_DIR}"
